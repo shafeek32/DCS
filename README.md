@@ -1,86 +1,154 @@
-# Decision Companion System
+# Decision Companion System (DCS)
 
-A production-quality MERN stack application designed to help users make objective, mathematically-backed decisions using the **Weighted Scoring Model (WSM)**.
+Decision Companion System is a full-stack decision support application that helps users make explainable, criteria-based choices using a weighted scoring model.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Stack](https://img.shields.io/badge/stack-MERN-green.svg)
+## 1) My Understanding of the Problem
 
-## 🚀 Key Features
+The assignment asks for more than “just code.” The system must:
 
-*   **Weighted Scoring Model**: Assign importance to different criteria (e.g., Cost vs. Quality) to calculate a weighted score.
-*   **Transparent Explanation Engine**: The system doesn't just give you a "winner"; it generates a human-readable paragraph explaining *why* an option won (e.g., "X won because it scored highest in Cost, which you rated as most important").
-*   **Dynamic Decision Wizard**: A multi-step form to guide you through structuring your decision.
-*   **Real-time Workspace**: Add options, adjust scores, and see rankings update instantly.
-*   **Clean Architecture**: Separation of concerns with a dedicated Service Layer for business logic.
+- accept a variable number of options,
+- accept decision criteria with different priorities,
+- evaluate options algorithmically,
+- return a ranked output,
+- and explain the recommendation in human language.
 
-## 🛠️ Tech Stack
+I interpreted this as building an **explainable decision engine** that is interactive (inputs can change) and deterministic (users can verify how results were produced).
 
-*   **Frontend**: React (Vite), Tailwind CSS, Lucide Icons, React Hook Form.
-*   **Backend**: Node.js, Express, MongoDB (Mongoose).
-*   **Architecture**: Logic separated into `controllers`, `services`, and `models`.
+## 2) What I Built
 
-## 📂 Project Structure
+A MERN-based application with:
 
-```
-root
-├── client/          # React Frontend
-│   ├── src/
-│   │   ├── components/  # Reusable UI components
-│   │   ├── pages/       # Page views (Home, Create, Workspace)
-│   │   ├── services/    # API integration
-│   │   └── hooks/       # Logic encapsulation
-├── server/          # Node Backend
-│   ├── src/
-│   │   ├── config/      # Database setup
-│   │   ├── controllers/ # HTTP Request Handlers
-│   │   ├── models/      # Mongoose Schemas (Decision, Option)
-│   │   ├── routes/      # API Endpoints
-│   │   ├── services/    # Business Logic (WSM Algorithm)
-│   │   └── utils/       # Validation (Joi)
-```
+- **Frontend (React + Vite + Tailwind)** for decision setup and workspace-style edits.
+- **Backend (Node + Express + MongoDB)** for data persistence and scoring APIs.
+- **Evaluation service** implementing a transparent weighted scoring model.
+- **Explanation service** that identifies why the winning option ranks highest.
 
-## 🔧 Installation & Setup
+The system is not hard-coded to one scenario. Users can define any decision context (e.g., laptop buying, team selection, travel planning), create custom criteria and weights, and re-evaluate instantly.
 
-### 1. Prerequisites
-*   Node.js (v18+)
-*   MongoDB (Local or Atlas URI)
+## 3) Assumptions
 
-### 2. Backend Setup
+- Each criterion has an explicit numeric weight representing importance.
+- Each option receives a numeric rating per criterion.
+- Higher weighted score indicates a better recommendation.
+- Users provide trustworthy ratings (the tool is a companion, not an oracle).
+- Explainability is preferred over highly complex optimization.
+
+## 4) Why This Structure
+
+I chose a layered structure to keep responsibilities clear:
+
+- `routes` for HTTP exposure,
+- `controllers` for request/response orchestration,
+- `services` for decision logic,
+- `models` for persistence.
+
+This improves maintainability and allows the scoring engine to evolve independently from API or UI concerns.
+
+## 5) Decision Logic
+
+The current model uses the **Weighted Scoring Model (WSM)**:
+
+\[
+\text{Option Score} = \sum (\text{criterion weight} \times \text{option rating for that criterion})
+\]
+
+Recommendation transparency includes:
+
+- winning option score,
+- ranked list of alternatives,
+- key criterion that most influenced the winner,
+- short explanation comparing winner vs. runner-up.
+
+## 6) AI Usage, Role, and Limitations
+
+AI can assist with:
+
+- language polishing of explanations,
+- drafting documentation,
+- brainstorming architecture alternatives.
+
+AI does **not** decide the winner. Core ranking is deterministic and implemented directly in backend service logic. This avoids a black-box recommendation path and keeps results auditable.
+
+Limitations:
+
+- if user inputs are biased or poor quality, output quality degrades,
+- weighted linear scoring may miss non-linear trade-offs,
+- no uncertainty/confidence modeling yet.
+
+## 7) Edge Cases Considered
+
+- Missing criteria, options, or scores.
+- Mismatched score arrays and criteria definitions.
+- Tied scores between options.
+- Extremely unbalanced weight distributions.
+- Invalid identifiers or malformed payloads.
+
+## 8) Trade-offs
+
+- **Chosen**: weighted linear model for clarity and explainability.
+- **Deferred**: pairwise methods (AHP), utility curves, Monte Carlo uncertainty.
+- **Chosen**: fast interactive updates rather than complex optimization.
+- **Deferred**: collaborative multi-user decisions and historical analytics.
+
+## 9) Design Diagram
+
+A decision logic / component flow diagram is included here:
+
+- [`docs/decision-logic-diagram.md`](docs/decision-logic-diagram.md)
+
+## 10) How to Run
+
+### Prerequisites
+
+- Node.js 18+
+- MongoDB local instance or MongoDB Atlas URI
+
+### Backend
+
 ```bash
 cd server
 npm install
-# Create .env file
-echo "MONGO_URI=mongodb://localhost:27017/decision-companion" > .env
-echo "PORT=5000" >> .env
+cp .env.example .env 2>/dev/null || true
+# set at least:
+# MONGO_URI=mongodb://localhost:27017/decision-companion
+# PORT=5000
 npm run dev
 ```
 
-### 3. Frontend Setup
+### Frontend
+
 ```bash
 cd client
 npm install
 npm run dev
 ```
 
-## 🧠 Algorithmic Transparency
+### Optional quality checks
 
-The core of this system is the **Weighted Scoring Model (WSM)**.
+```bash
+cd client && npm run lint
+cd client && npm run build
+```
 
-`Score = Σ (Criterion Weight × Option Rating)`
+## 11) API Surface (High-level)
 
-The **Explanation Service** (`server/src/services/evaluation.service.js`) analyzes the data to produce insights:
-1.  Identifies the winner based on total weighted score.
-2.  Finds the criterion that contributed most to the winner's score.
-3.  Compares the winner to the runner-up to highlight the decisive factor.
+- `POST /api/decisions` — create decision skeleton
+- `GET /api/decisions/:id` — fetch decision
+- `PUT /api/decisions/:id` — update options/criteria/scores
+- `POST /api/decisions/:id/evaluate` — compute ranking + explanation
 
-## 📝 API Endpoints
+## 12) What I Would Improve with More Time
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/decisions` | Create a new decision basics |
-| `GET` | `/api/decisions/:id` | Get full decision details |
-| `PUT` | `/api/decisions/:id` | Update options or scores |
-| `POST` | `/api/decisions/:id/evaluate` | Run WSM and get explanation |
+- Add automated backend tests for scoring and explanation edge cases.
+- Add sensitivity analysis (“how much weight change flips the winner?”).
+- Add criterion normalization helpers and guided scoring scales.
+- Add exportable reports and decision history versions.
+- Add optional AI-assisted criterion suggestions with strict human override.
 
----
-*Built with ❤️ for rational decision making.*
+## 13) Repository Deliverables
+
+- Source code (client + server)
+- This README
+- `BUILD_PROCESS.md`
+- `RESEARCH_LOG.md`
+- `docs/decision-logic-diagram.md`
